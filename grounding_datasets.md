@@ -122,6 +122,11 @@ Combined base weight: 0.001544 (0.154% of total).
 
 ## OCR BBox / Text Detection
 
+Notes:
+- "ctw_bbox_v1": Bounding boxes in floating point format: [0.55, 0.38, 0.56, 0.39]
+- "hiertext_bbox_v1": Bounding boxes in floating point format: [0.55, 0.38, 0.56, 0.39]
+- The datasets contain different OCR tasks and look similar to each other. Unclear whether removal of any of the datasets is sensible.
+
 Combined base weight: 0.000910 (0.091% of total)
 
 | Dataset | Base Weight | Upweight | Changed | Packed Rows | Base Epochs | Upweight Epochs |
@@ -134,6 +139,8 @@ Combined base weight: 0.000910 (0.091% of total)
 
 ## Visual7W (pointing QA)
 
+Notes:
+- keep openbee only.
 Combined base weight: 0.000846 (0.085% of total)
 
 | Dataset | Base Weight | Upweight | Changed | Packed Rows | Base Epochs | Upweight Epochs |
