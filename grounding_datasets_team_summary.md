@@ -1,62 +1,44 @@
-# Visual Grounding Dataset Plan
+# Visual Grounding Dataset Plan -- Team Summary
 
 ## Existing Grounding-Related Data in the Mix
 
-Grounding and spatial-coordinate datasets collectively represent **~4.0%** of the current training weight (40 datasets, total weight 0.0402). This is low compared to SotA models (Qwen3-VL, STEP3-VL) which dedicate significant portions to grounding.
+Grounding and spatial-coordinate datasets collectively represent **~3.2%** of the current training weight. This is low compared to SotA models (Qwen3-VL, STEP3-VL) which dedicate significant portions to grounding.
 
 ### By dataset family (% of grounding data, i.e. grounding = 100%):
 
-**CLEVR + Super-CLEVR (synthetic 3D scenes, counting) -- 33.3%** of grounding:
-- `openbee_honey_grounding_and_counting_clevr_v1_en` (15.6%)
-- `clevr_math_train` (9.8%)
-- `cambrian_10m_clevr` (3.2%)
-- `mammoth_clevr_700k` (2.1%)
-- `super_clevr_train` (1.1%)
-- + 6 smaller variants: openbee super_clevr (0.4%), the_cauldron_clevr (0.4%), openbee clevr_change (0.3%), mammoth_super_clevr (0.2%), openbee clevr_math (0.1%), mammoth_internvl2_llama3_super_clevr (0.1%), mammoth_clevr_math (0.0%)
-
-**PixMo point annotations -- 16.6%** of grounding:
-- `pixmo_point_expl` (9.2%)
-- `openbee_honey_general_pixmo_points_explanations_v1_en` (7.5%)
+**PixMo point annotations -- 21.2%** of grounding:
+- `pixmo_point_expl` (11.7%)
+- `openbee_honey_general_pixmo_points_explanations_v1_en` (9.5%)
 - Note: other PixMo datasets (pixmo_ama, pixmo_docs, pixmo_cap_*) are general VQA/caption, not grounding
 
-**LVIS (fine-grained detection instructions) -- 15.0%** of grounding:
-- `openbee_honey_general_lvis_instructv4_v1_en` (14.0%)
-- `mammoth_lvis_instruct4v_220k` (1.0%)
+**CLEVR + Super-CLEVR (synthetic 3D scenes, counting) -- 20.9%** of grounding:
+- `openbee_honey_grounding_and_counting_clevr_v1_en` (19.8%)
+- + 3 smaller variants: super_clevr (0.5%), clevr_change (0.3%), clevr_math (0.2%)
 
-**VisualGenome (scene graphs, regions) -- 8.3%** of grounding:
-- `openbee_honey_grounding_and_counting_visualgenome_v1_en` (6.1%)
-- `mammoth_visualgenome_llava_next` (2.2%)
+**LVIS (fine-grained detection instructions) -- 19.1%** of grounding:
+- `openbee_honey_general_lvis_instructv4_v1_en` (17.8%)
+- `mammoth_lvis_instruct4v_220k` (1.3%)
 
-**TallyQA (counting on natural images) -- 7.3%** of grounding:
-- `cambrian_10m_tallyqa` (3.7%)
-- `openbee_honey_grounding_and_counting_tallyqa_v1_en` (2.7%)
-- `the_cauldron_tallyqa` (0.8%)
-- `mammoth_tallyqa` (0.1%)
+**VisualGenome (scene graphs, regions) -- 10.6%** of grounding:
+- `openbee_honey_grounding_and_counting_visualgenome_v1_en` (7.7%)
+- `mammoth_visualgenome_llava_next` (2.9%)
 
-**Other grounding/counting (TQA, IconQA, MovieNet, MathV360K) -- 5.9%** of grounding:
-- `openbee_honey_grounding_and_counting_tqa_v1_en` (3.6%)
-- `openbee_honey_grounding_and_counting_iconqa_v1_en` (1.5%)
-- `openbee_honey_grounding_and_counting_movienet_v1_en` (0.4%)
-- `openbee_honey_grounding_and_counting_mathv360k_vqa_as_v1_en` (0.3%)
-- `openbee_honey_grounding_and_counting_other_v1_en` (0.0%)
+**Other grounding/counting (TQA, IconQA, MovieNet, MathV360K) -- 7.5%** of grounding
 
-**Localized Narratives (grounded captions with mouse traces) -- 5.1%** of grounding:
-- `the_cauldron_localized_narratives` (5.1%)
+**Localized Narratives (grounded captions with mouse traces) -- 6.5%** of grounding:
+- `the_cauldron_localized_narratives` (6.5%)
 
-**ShareGPT4V-SAM (grounded captions + SAM masks) -- 3.8%** of grounding:
-- `openbee_honey_general_sharegpt4v_sam_v1_en` (3.0%)
-- `mammoth_sharegpt4v_sam` (0.9%)
+**ShareGPT4V-SAM (grounded captions + SAM masks) -- 4.9%** of grounding
 
-**OCR bbox (text detection boxes) -- 2.3%** of grounding:
-- ctw_bbox (0.8%), rects_cropped (0.5%), hiertext_bbox (0.4%), rects_full (0.4%), mammoth_rects (0.3%), openbee_ocr_rects (0.1%)
+**TallyQA (counting on natural images) -- 3.5%** of grounding
 
-**Visual7W (pointing QA) -- 2.1%** of grounding:
-- `openbee_honey_general_visual7w_v1_en` (1.9%)
-- `mammoth_visual7w` (0.1%)
-- `the_cauldron_visual7w` (0.0%)
+**OCR bbox (text detection boxes) -- 3.0%** of grounding:
+- ctw_bbox, hiertext_bbox, rects_cropped, rects_full, mammoth_rects, openbee_ocr_rects
 
-**Objects365 (object detection, 365 categories) -- 0.2%** of grounding (!!):
-- `openbee_honey_general_objects365_v1_en` only
+**Visual7W (pointing QA) -- 2.7%** of grounding
+
+**Objects365 (object detection, 365 categories) -- 0.3%** of grounding (!!):
+- Only 296 packed rows
 
 ---
 
@@ -66,10 +48,10 @@ Compared to SotA (Qwen3-VL, STEP3-VL):
 
 1. **No RefCOCO/+/g** -- the classic referring expression benchmark family, used by Qwen3-VL for training
 2. **Objects365 is negligible** -- 296 packed rows vs. millions of annotations in SotA recipes
-3. **No Merlin** -- used by STEP3-VL for both bbox and point grounding (dataset not publicly available)
+3. **No Merlin** -- used by STEP3-VL for both bbox and point grounding
 4. **No OpenImages detection** -- used by both Qwen3-VL and STEP3-VL at scale
 5. **No reasoning traces for grounding** -- SotA models (Long Grounded Thoughts, Perception-R1) show CoT improves spatial understanding
-6. **Total grounding is ~4.0%** -- likely insufficient for competitive spatial understanding
+6. **Total grounding is ~3.2%** -- likely insufficient for competitive spatial understanding
 
 ---
 
@@ -77,7 +59,7 @@ Compared to SotA (Qwen3-VL, STEP3-VL):
 
 All new datasets will use **[0, 1000] normalized coordinates** (Qwen3-VL convention, see below). Existing coordinate datasets will also be reprocessed to this format.
 
-### Batch 1: Core Grounding
+### Batch 1: Core Grounding (priority)
 
 | Dataset | Description | Size | Source |
 |---------|-------------|------|--------|
@@ -92,7 +74,7 @@ All new datasets will use **[0, 1000] normalized coordinates** (Qwen3-VL convent
 | **OODVQA** (full) | OOD VQA + counting on distribution-shifted images (unusual styles, sketches). From "How Many Unicorns" (ECCV 2024). We have ~half already via cambrian. | ~8.5K rows total | [UCSC-VLAA](https://github.com/UCSC-VLAA/vllm-safety-benchmark) |
 | **OpenImages V7 Detection** (100K subset) | Category-balanced subset of OpenImages detection. 600 object classes. Used by Qwen3-VL and STEP3-VL. | 100K images (from 1.9M total) | `vikhyatk/openimages-bbox` |
 
-### Batch 2 (deferred)
+### Batch 2: Large-Scale Detection
 
 | Dataset | Description | Size | Source |
 |---------|-------------|------|--------|
@@ -128,25 +110,8 @@ After inspecting text samples from all candidate datasets (via uncompressed JSON
 
 ---
 
-## Execution Order
-
-### Batch 1: All core grounding datasets (parallel)
-- RefCOCO / RefCOCO+ / RefCOCOg (+ Ref-L4 quality flags)
-- Objects365 200K subset
-- Long Grounded Thoughts stage1 (753K)
-- VisionFoundry-10K
-- FSC147
-- OODVQA (full)
-- OpenImages V7 Detection 100K subset
-- Reprocess 3 existing datasets to [0,1000] coords
-
-### Batch 2 (deferred)
-- OpenImages Localized Narratives -- P2 (recapping with mouse traces)
-- Long Grounded Thoughts stage2 / DPO
-- Recapping grounding datasets with Qwen3.6
-
----
-
 ## Implementation
 
 All ingestion goes through the `data_acquisition` pipeline in a dedicated git worktree. Each dataset gets a `process.py` implementing `BaseDatasetAcquisition.transform_row()`, outputting the `multimodal_ift` schema (images + conversations) to GCS as parquet.
+
+Batch 1 (all parallel): RefCOCO/+/g + Ref-L4, Objects365 200K, LGT stage1, VisionFoundry-10K, FSC147, OODVQA, OpenImages V7 100K, reprocess 3 existing coord datasets. Batch 2 (deferred): OpenImages Loc. Narratives, LGT stage2/DPO, recapping with Qwen3.6.
