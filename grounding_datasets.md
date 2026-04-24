@@ -10,6 +10,9 @@
 
 ## CLEVR / Super-CLEVR (synthetic counting/3D)
 
+Notes:
+- keep the openbee versions, remove the rest (as is).
+
 Combined base weight: 0.013360 (1.336% of total)
 
 | Dataset | Base Weight | Upweight | Changed | Packed Rows | Base Epochs | Upweight Epochs |
@@ -31,7 +34,8 @@ Combined base weight: 0.013360 (1.336% of total)
 
 Combined base weight: 0.006684 (0.668% of total)
 
-Note: pixmo_point_expl contains pointing data in format: <points points="(21.5, 10.6), (21.3, 12.8), (21, 15.7), (23.2, 17.8), (22, 20), (22, 22.2), (22.9, 24.8), (22.6, 27.5)">, i.e. yet a different format from [0,1000] or the floating point format. `openbee_honey_general_pixmo_points_explanations_v1_en` does not seem to contain pointing data.
+Note: - pixmo_point_expl contains pointing data in format: <points points="(21.5, 10.6), (21.3, 12.8), (21, 15.7), (23.2, 17.8), (22, 20), (22, 22.2), (22.9, 24.8), (22.6, 27.5)">, i.e. yet a different format from [0,1000] or the floating point format. `openbee_honey_general_pixmo_points_explanations_v1_en` does not seem to contain pointing data.
+- keep both datasets at same proportions.
 
 | Dataset | Base Weight | Upweight | Changed | Packed Rows | Base Epochs | Upweight Epochs |
 |---------|-----------|----------|---------|-------------|-------------|----------------|
@@ -55,6 +59,7 @@ Combined base weight: 0.003335 (0.333% of total)
 
 Notes:
 - There is a repetition bug in the turns of the datasets where the first turn is repeated 3 times. This is the case for both `openbee_honey_grounding_and_counting_visualgenome_v1_en` and `mammoth_visualgenome_llava_next`. It is correct that we drop `mammoth_visualgenome_llava_next`.
+- only keep openbee_honey_grounding_and_counting_visualgenome_v1_en, remove mammoth_visualgenome_llava_next to maximize upweighting effect on the openbee dataset.
 
 | Dataset | Base Weight | Upweight | Changed | Packed Rows | Base Epochs | Upweight Epochs |
 |---------|-----------|----------|---------|-------------|-------------|----------------|
