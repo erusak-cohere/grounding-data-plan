@@ -60,6 +60,7 @@ Combined base weight: 0.003335 (0.333% of total)
 Notes:
 - There is a repetition bug in the turns of the datasets where the first turn is repeated 3 times. This is the case for both `openbee_honey_grounding_and_counting_visualgenome_v1_en` and `mammoth_visualgenome_llava_next`. It is correct that we drop `mammoth_visualgenome_llava_next`.
 - only keep openbee_honey_grounding_and_counting_visualgenome_v1_en, remove mammoth_visualgenome_llava_next to maximize upweighting effect on the openbee dataset.
+- bboxes: [0-1] floats, e.g. `[0.708,0.787,0.728,0.838]`
 
 | Dataset | Base Weight | Upweight | Changed | Packed Rows | Base Epochs | Upweight Epochs |
 |---------|-----------|----------|---------|-------------|-------------|----------------|
