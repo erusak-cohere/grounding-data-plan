@@ -108,3 +108,4 @@ Coordinates are always integers in [0, 1000], normalized relative to image dimen
 | ctw_bbox (existing) | Yes | TODO | TODO | — |
 | ShareGPT4V-SAM (existing) | Yes | TODO | TODO | TODO |
 | PixMo points (existing) | Yes | TODO | TODO | — |
+| Nemotron OI BBox v2 (1.66M) | Yes | Yes (already [0,1000]) | TODO | TODO — [separate plan](nemotron_oi_bbox_recaptioning_plan.md) |
