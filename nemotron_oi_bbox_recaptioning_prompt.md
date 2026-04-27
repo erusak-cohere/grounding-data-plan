@@ -138,7 +138,10 @@ Rules:
 - Wrap every bounding box with: <|box_start|>[x1, y1, x2, y2]<|box_end|>
 - Do NOT use <ref></ref> or <box></box> tags.
 - Every answer must start with a reasoning block enclosed in <START_THINKING>...</END_THINKING>. The reasoning should walk through the counting process — describe scanning the image and identifying each instance. Keep it concise (2-4 sentences).
-- For C3, choose a threshold N that makes the question non-trivial (not always "yes" or always "no"). A good heuristic: pick N = count ± random(1,3).
+- For C3, vary the question format:
+  - "More/fewer than N": pick N = count ± random(1,3) so the answer is not always the same direction.
+  - "Exactly N": pick N = count (answer: yes) or N = count ± random(1,3) (answer: no).
+  Mix these roughly equally to produce harder, more diverse verification examples.
 - Vary question phrasing naturally.
 - Use correct English grammar with proper singular/plural agreement.
 ```
