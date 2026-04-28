@@ -443,40 +443,84 @@ Rules:
   Do not contradict them.
 ```
 
-### 6.3 Task C -- Counting: System Prompt
+### 6.3 Task C1 -- Direct Counting: System Prompt
 
 ```
 You are an expert visual counting assistant. You will be shown an image along with a
 scene annotation. You will be asked to count instances of ONE specific category.
 
-Your job is to produce a high-quality, natural-sounding counting conversation turn. You
-will be told which counting sub-type to generate:
-
-- C1 (Direct counting): The user asks how many X are in the image. The answer gives the
-  count only (no bounding boxes).
-- C2 (Box-based counting): The user asks how many X are in the image and requests their
-  locations. The answer gives the count and lists all bounding boxes.
-- C3 (Verification counting): The user asks a yes/no question about whether there are
-  more/fewer/exactly N instances. The answer confirms or denies and gives the actual count.
+Your job is to produce a high-quality, natural-sounding counting conversation turn
+consisting of:
+1. A USER question asking how many instances of the category are in the image.
+2. A CHATBOT answer that first contains a reasoning block enclosed in
+   <START_THINKING>...<END_THINKING>, and then states the count.
 
 Rules:
-- The count and bounding boxes are ground truth. You MUST use them exactly -- do not
-  change the count or invent/omit any bounding boxes.
-- Wrap every bounding box with: <|box_start|>[x1, y1, x2, y2]<|box_end|>
+- The count is given to you as ground truth. You MUST state the exact count provided --
+  do not change it.
+- Do NOT include any bounding boxes in the answer. Only state the count.
 - Do NOT use <ref></ref> or <box></box> tags.
-- Every answer must start with a reasoning block enclosed in
-  <START_THINKING>...<END_THINKING>. The reasoning should walk through the counting
-  process. Keep it concise (2-4 sentences).
-- For C3, vary the question format:
-  - "More/fewer than N": pick N = count +/- random(1,3) so the answer is not always
-    the same direction.
-  - "Exactly N": pick N = count (answer: yes) or N = count +/- random(1,3) (answer: no).
-  Mix these roughly equally to produce harder, more diverse verification examples.
-- Vary question phrasing naturally.
+- The reasoning should walk through the counting process -- describe scanning the image
+  and identifying each instance. Keep it concise (2-4 sentences).
+- Vary the question phrasing naturally.
 - Use correct English grammar with proper singular/plural agreement.
 ```
 
-### 6.4 Task D -- Relational: System Prompt
+### 6.4 Task C2 -- Box-based Counting: System Prompt
+
+```
+You are an expert visual counting assistant. You will be shown an image along with a
+scene annotation. You will be asked to count instances of ONE specific category and
+provide their locations.
+
+Your job is to produce a high-quality, natural-sounding counting conversation turn
+consisting of:
+1. A USER question asking how many instances of the category are in the image and where
+   they are located.
+2. A CHATBOT answer that first contains a reasoning block enclosed in
+   <START_THINKING>...<END_THINKING>, and then states the count followed by a numbered
+   list of all bounding boxes.
+
+Rules:
+- The count and bounding boxes are given to you as ground truth. You MUST use them
+  exactly -- do not change the count or invent/omit any bounding boxes.
+- Wrap every bounding box with: <|box_start|>[x1, y1, x2, y2]<|box_end|>
+- Do NOT use <ref></ref> or <box></box> tags.
+- The reasoning should walk through the counting process -- describe scanning the image
+  and identifying each instance. Keep it concise (2-4 sentences).
+- Vary the question phrasing naturally.
+- Use correct English grammar with proper singular/plural agreement.
+```
+
+### 6.5 Task C3 -- Verification Counting: System Prompt
+
+```
+You are an expert visual counting assistant. You will be shown an image along with a
+scene annotation. You will be asked a yes/no question about whether there are
+more/fewer/exactly N instances of a specific category.
+
+Your job is to produce a high-quality, natural-sounding verification conversation turn
+consisting of:
+1. A USER question asking whether there are more than, fewer than, or exactly N instances
+   of the category.
+2. A CHATBOT answer that first contains a reasoning block enclosed in
+   <START_THINKING>...<END_THINKING>, and then confirms or denies the claim, stating the
+   actual count.
+
+Rules:
+- The count is given to you as ground truth. You MUST use it exactly.
+- A threshold N is also provided. Vary the question format:
+  - "More/fewer than N": compare the actual count against N.
+  - "Exactly N": check whether the actual count equals N.
+- Do NOT include bounding boxes in the answer.
+- Do NOT use <ref></ref> or <box></box> tags.
+- The reasoning should walk through the counting process -- describe scanning the image
+  and counting each instance. Keep it concise (2-4 sentences).
+- Vary the question phrasing naturally.
+- Use correct English grammar with proper singular/plural agreement.
+```
+
+### 6.6 Task D -- Relational: System Prompt
 
 ```
 You are an expert visual spatial reasoning assistant. You will be shown an image along
@@ -506,7 +550,7 @@ Rules:
   tree" not "the Tree").
 ```
 
-### 6.5 User Message Template
+### 6.7 User Message Template
 
 The user message provides the full scene annotation as context, plus the specific task metadata:
 
@@ -533,7 +577,7 @@ Where `{task_specific_fields}` varies by task:
 - **C1/C2/C3**: `Target category: {category}\nGT count: {count}\nGT bboxes: {bbox_list}\nSub-type: {C1|C2|C3}`
 - **D**: `Object 1: {cat_a} at {bbox_a}\nObject 2: {cat_b} at {bbox_b}\nGT spatial relation: {relation}`
 
-### 6.6 Constraining the output
+### 6.8 Constraining the output
 
 - Tasks A and C: bboxes are hard-constrained. The prompt provides them as ground truth and instructs the model to copy them verbatim. Post-processing verifies with regex matching.
 - Task B: bboxes appear in the user question (not generated by the model), so they are inherently constrained. The model's category description is soft-validated against the ground-truth label.
@@ -559,7 +603,5 @@ Where `{task_specific_fields}` varies by task:
 
 ## 8. Open Questions for Discussion
 
-1. **Tiny/huge bbox filtering**: Should we filter out tiny boxes (area < 200) and/or full-image boxes (area > 900k) before recaptioning, or keep them and let the model handle them?
-2. **Hierarchical category handling**: When the same image has annotations for both "Person" and "Man", should we suppress counting/relational tasks for the parent category to avoid confusion?
-3. **Reasoning trace depth**: Should reasoning be 2-4 sentences (current plan) or shorter/longer? Longer reasoning costs more tokens but gives richer training signal.
-4. **Task weight tuning**: The 30/25/25/20 split is a starting point. Should we adjust after inspecting a pilot batch?
+1. **Reasoning trace depth**: Should reasoning be 2-4 sentences (current plan) or shorter/longer? Longer reasoning costs more tokens but gives richer training signal.
+2. **Task weight tuning**: The 30/25/25/20 split is a starting point. Should we adjust after inspecting a pilot batch?
