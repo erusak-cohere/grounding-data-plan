@@ -1,5 +1,7 @@
 # Nemotron VLM v2 OI BBox: Recaptioning Plan & Pipeline
 
+![Example image from Nemotron VLM v2 OI BBox.](./nemotron_oi_bbox_recaptioning_plan.png)
+
 ## 1. Dataset Overview
 
 **Source:** `gs://cohere-data/vision/agent_trajectory/v4_filtered/uncompressed/nemotron_vlm_v2_oi_bbox_2_v1/`
@@ -31,7 +33,7 @@
 - Cross-turn bbox overlap is very low (0.45%), confirming different turns target genuinely different objects.
 - OpenImages hierarchical labels cause frequent co-occurrence of e.g. "Man" + "Human face" + "Clothing" on the same image. Requires care during counting task generation.
 
-**Verdict: bboxes are high quality and can be reused as-is. Recommend light filtering of tiny boxes (area < 200) during final assembly.**
+**Verdict: bboxes are high quality and can be reused as-is.**
 
 ### 1.2 Current format issues (why we need recaptioning)
 
