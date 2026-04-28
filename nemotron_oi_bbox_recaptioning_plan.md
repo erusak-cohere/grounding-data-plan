@@ -53,7 +53,7 @@
 
 Since the bboxes are already high quality and in the correct [0, 1000] format, we **skip steps 1 + 2** of the general recaptioning plan (coordinate harmonization and object identification / cross-referencing). We proceed directly to **Q+A generation (steps 3 + 4)**.
 
-The recaptioning will produce three task types per image, reusing the existing bboxes and category labels as ground truth. Each assistant response must include a reasoning trace.
+We **consolidate multi-turn samples** into single scene annotations per image (merging all categories + bboxes from all turns), then randomly assign each image one of four task types (A: Grounding, B: Recognition, C: Counting, D: Relational). Each assistant response must include a reasoning trace. See `nemotron_oi_bbox_recaptioning_full.md` for the complete up-to-date plan.
 
 ---
 
