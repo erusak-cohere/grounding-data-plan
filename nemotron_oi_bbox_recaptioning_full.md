@@ -43,8 +43,7 @@
 4. **No reasoning traces**: Responses jump straight to the answer with no `<START_THINKING>...<END_THINKING>` block.
 5. **Conversion to single-turn**: We will consolidate the current multi-turn QA as meta-data to generate a single question-answer pair per turn.
 
-> [!INFO]
-> Point 5 is debatable. We could keep the multi-turn format, and for example generate multiple turns by generating each task instead of sampling 1 task per sample. I think multi-turn makes sense if we want to train the model having a longer context window with multiple related questions about the same image. In terms of data, I think we have more than enough samples to not require reusing the same image for multiple tasks.
+> ❗️ Point 5 is debatable. We could keep the multi-turn format, and for example generate multiple turns by generating each task instead of sampling 1 task per sample. I think multi-turn makes sense if we want to train the model having a longer context window with multiple related questions about the same image. In terms of data, I think we have more than enough samples to not require reusing the same image for multiple tasks.
 
 ---
 
