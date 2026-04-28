@@ -1,6 +1,6 @@
 # Nemotron VLM v2 OI BBox: Recaptioning Plan & Pipeline
 
-![Example image from Nemotron VLM v2 OI BBox.](./nemotron_oi_bbox_recaptioning_plan.png)
+![Example image from Nemotron VLM v2 OI BBox.](./nemotron_example.png)
 
 ## 1. Dataset Overview
 
