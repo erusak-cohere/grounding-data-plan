@@ -45,7 +45,7 @@
 
 ### 1.3 Current format issues (why we need recaptioning)
 
-1. **Special tokens**: Uses `<ref>Object</ref>:<box>[x1, y1, x2, y2]</box>` -- must be converted to `<|box_start|>[x1, y1, x2, y2]<|box_end|>` and `<ref></ref>` must be removed.
+1. **Markup tokens**: Uses `<ref>Object</ref>:<box>[x1, y1, x2, y2]</box>` -- must be converted to plain `[[x1, y1, x2, y2]]` double-bracket format and `<ref></ref>` must be removed. No special tokenizer tokens are used; double brackets are standard text tokens that any tokenizer handles natively (following InternVL's approach).
 2. **Grammar errors** (~20% of responses): "there are 1 Man", "Here are their positions" for singular items, awkward category-name pluralization.
 3. **Question monotony**: All ~25 question templates ask the same thing (text -> bbox localization). No reverse-direction, counting, or relational tasks.
 4. **No reasoning traces**: Responses jump straight to the answer with no `<START_THINKING>...<END_THINKING>` block.
@@ -79,7 +79,7 @@ This consolidated scene annotation becomes the ground truth passed to Qwen. It e
 - One Q+A conversation per image (1 sample = 1 output).
 - Each sample is randomly assigned **exactly one** of four task types (A/B/C/D).
 - Every assistant response includes a `<START_THINKING>...<END_THINKING>` reasoning trace.
-- All bboxes use `<|box_start|>[x1, y1, x2, y2]<|box_end|>` tokens.
+- All bboxes use `[[x1, y1, x2, y2]]` double-bracket format (no special tokens, no tokenizer update needed).
 
 **Estimated final dataset size:** ~1.66M single-turn conversations (one per image).
 
@@ -99,8 +99,8 @@ Chatbot: <START_THINKING>I need to locate all instances of flowers in the image.
 see two flowers -- one near the center-left area and another toward the upper-right
 corner.<END_THINKING>
 I found 2 flowers in this image:
-1. <|box_start|>[463, 488, 528, 631]<|box_end|>
-2. <|box_start|>[818, 198, 852, 293]<|box_end|>
+1. [[463, 488, 528, 631]]
+2. [[818, 198, 852, 293]]
 ```
 
 ### Task B -- Recognition (bbox -> text)
@@ -110,17 +110,17 @@ Provide bboxes in the question and ask the model to identify what they contain. 
 **Example (cross-category, leveraging consolidation):**
 
 ```
-User: What can you see at <|box_start|>[61, 55, 606, 521]<|box_end|>,
-<|box_start|>[291, 25, 382, 97]<|box_end|>, and
-<|box_start|>[5, 198, 18, 257]<|box_end|>?
+User: What can you see at [[61, 55, 606, 521]],
+[[291, 25, 382, 97]], and
+[[5, 198, 18, 257]]?
 Chatbot: <START_THINKING>I'll examine each region. The first is a large area in the
 upper-left showing a white two-story house. The second is a small area at the top
 containing a tree canopy. The third is a narrow vertical strip on the left edge
 showing a window frame.<END_THINKING>
 The objects at the specified locations are:
-1. <|box_start|>[61, 55, 606, 521]<|box_end|> -- A white two-story house with a red roof.
-2. <|box_start|>[291, 25, 382, 97]<|box_end|> -- A tree canopy with green leaves.
-3. <|box_start|>[5, 198, 18, 257]<|box_end|> -- A narrow window with a dark frame.
+1. [[61, 55, 606, 521]] -- A white two-story house with a red roof.
+2. [[291, 25, 382, 97]] -- A tree canopy with green leaves.
+3. [[5, 198, 18, 257]] -- A narrow window with a dark frame.
 ```
 
 ### Task C -- Counting (derived from detection annotations)
@@ -158,12 +158,12 @@ For images where 2+ categories each have exactly 1 bbox and the bboxes are spati
 
 ```
 User: What is the spatial relationship between the tree and the car in this image?
-Chatbot: <START_THINKING>The tree is located at <|box_start|>[3, 27, 436, 478]<|box_end|>, which places it
-in the upper-left portion of the image. The car is at <|box_start|>[11, 385, 999, 744]<|box_end|>, which
+Chatbot: <START_THINKING>The tree is located at [[3, 27, 436, 478]], which places it
+in the upper-left portion of the image. The car is at [[11, 385, 999, 744]], which
 occupies the lower-right area. Comparing their positions, the tree is above and to
 the left of the car.<END_THINKING>
-The tree <|box_start|>[3, 27, 436, 478]<|box_end|> is above and to the left of
-the car <|box_start|>[11, 385, 999, 744]<|box_end|>.
+The tree [[3, 27, 436, 478]] is above and to the left of
+the car [[11, 385, 999, 744]].
 ```
 
 **Question format variants:**
@@ -290,7 +290,8 @@ Per-task validation rules:
 | Check | A | B | C1 | C2 | C3 | D |
 |-------|---|---|----|----|-----|---|
 | `<START_THINKING>...<END_THINKING>` present | Yes | Yes | Yes | Yes | Yes | Yes |
-| No legacy `<ref>` / `<box>` tags | Yes | Yes | Yes | Yes | Yes | Yes |
+| No legacy `<ref>` / `<box>` / `<\|box_start\|>` / `<\|box_end\|>` tags | Yes | Yes | Yes | Yes | Yes | Yes |
+| All bboxes use `[[x1, y1, x2, y2]]` format | Yes | Yes | -- | Yes | -- | Yes |
 | All GT bboxes in answer (exact match) | Yes | -- | -- | Yes | -- | Yes |
 | Bboxes from question echoed in answer | -- | Yes | -- | -- | -- | -- |
 | Count in answer matches GT | -- | -- | Yes | Yes | Yes | -- |
@@ -363,7 +364,7 @@ Each output line follows the **exact same schema** as the input JSONL. The image
       "contents": [
         {
           "metadata": null,
-          "text": "<START_THINKING>The tree is at [3,27,436,478]...<END_THINKING>\nThe tree <|box_start|>[3, 27, 436, 478]<|box_end|> is above and to the left of the car <|box_start|>[11, 385, 999, 744]<|box_end|>.",
+          "text": "<START_THINKING>The tree is at [[3, 27, 436, 478]]...<END_THINKING>\nThe tree [[3, 27, 436, 478]] is above and to the left of the car [[11, 385, 999, 744]].",
           "language_id": null,
           "grounding_spans": null,
           "content_type": "text"
@@ -402,9 +403,9 @@ Rules:
 - The bounding boxes are given to you as ground truth in normalized [0, 1000] format.
   You MUST use them exactly as provided -- do not change, reorder, or invent any
   coordinates.
-- Wrap every bounding box with the special tokens:
-  <|box_start|>[x1, y1, x2, y2]<|box_end|>
-- Do NOT use <ref></ref> or <box></box> tags.
+- Format every bounding box as: [[x1, y1, x2, y2]]
+  (double brackets, comma-separated integers, no special tokens).
+- Do NOT use <ref></ref>, <box></box>, <|box_start|>, or <|box_end|> tags.
 - The reasoning block should describe what you observe in the image that leads you to the
   answer. Be specific about visual appearance, position, and context. Keep it concise
   (2-4 sentences).
@@ -428,9 +429,10 @@ consisting of:
    <START_THINKING>...<END_THINKING>, and then describes what is found at each location.
 
 Rules:
-- The bounding boxes are given in normalized [0, 1000] format. Wrap every bounding box
-  with: <|box_start|>[x1, y1, x2, y2]<|box_end|>
-- Do NOT use <ref></ref> or <box></box> tags.
+- The bounding boxes are given in normalized [0, 1000] format. Format every bounding box
+  as: [[x1, y1, x2, y2]]
+  (double brackets, comma-separated integers, no special tokens).
+- Do NOT use <ref></ref>, <box></box>, <|box_start|>, or <|box_end|> tags.
 - The user question should embed the bounding boxes and ask about their contents.
 - In the reasoning block, describe what you actually see in each region of the image --
   appearances, colors, context, spatial relationships. Be specific and visually grounded.
@@ -459,7 +461,7 @@ Rules:
 - The count is given to you as ground truth. You MUST state the exact count provided --
   do not change it.
 - Do NOT include any bounding boxes in the answer. Only state the count.
-- Do NOT use <ref></ref> or <box></box> tags.
+- Do NOT use <ref></ref>, <box></box>, <|box_start|>, or <|box_end|> tags.
 - The reasoning should walk through the counting process -- describe scanning the image
   and identifying each instance. Keep it concise (2-4 sentences).
 - Vary the question phrasing naturally.
@@ -484,8 +486,9 @@ consisting of:
 Rules:
 - The count and bounding boxes are given to you as ground truth. You MUST use them
   exactly -- do not change the count or invent/omit any bounding boxes.
-- Wrap every bounding box with: <|box_start|>[x1, y1, x2, y2]<|box_end|>
-- Do NOT use <ref></ref> or <box></box> tags.
+- Format every bounding box as: [[x1, y1, x2, y2]]
+  (double brackets, comma-separated integers, no special tokens).
+- Do NOT use <ref></ref>, <box></box>, <|box_start|>, or <|box_end|> tags.
 - The reasoning should walk through the counting process -- describe scanning the image
   and identifying each instance. Keep it concise (2-4 sentences).
 - Vary the question phrasing naturally.
@@ -513,7 +516,7 @@ Rules:
   - "More/fewer than N": compare the actual count against N.
   - "Exactly N": check whether the actual count equals N.
 - Do NOT include bounding boxes in the answer.
-- Do NOT use <ref></ref> or <box></box> tags.
+- Do NOT use <ref></ref>, <box></box>, <|box_start|>, or <|box_end|> tags.
 - The reasoning should walk through the counting process -- describe scanning the image
   and counting each instance. Keep it concise (2-4 sentences).
 - Vary the question phrasing naturally.
@@ -534,12 +537,13 @@ turn consisting of:
    <START_THINKING>...<END_THINKING>, and then states the spatial relationship.
 
 Rules:
-- The bounding boxes are given in normalized [0, 1000] format. Wrap every bounding box
-  with: <|box_start|>[x1, y1, x2, y2]<|box_end|>
-- Do NOT use <ref></ref> or <box></box> tags.
+- The bounding boxes are given in normalized [0, 1000] format. Format every bounding box
+  as: [[x1, y1, x2, y2]]
+  (double brackets, comma-separated integers, no special tokens).
+- Do NOT use <ref></ref>, <box></box>, <|box_start|>, or <|box_end|> tags.
 - In the reasoning block, describe the positions of both objects and explain how you
   determined their spatial relationship. Keep it concise (2-4 sentences).
-- The answer must include both bounding boxes with special tokens.
+- The answer must include both bounding boxes in [[x1, y1, x2, y2]] format.
 - The spatial relationship must be consistent with the actual coordinates provided.
 - Vary the question format:
   - Yes/no: "Is the X to the right of the Y?"
@@ -579,9 +583,9 @@ Where `{task_specific_fields}` varies by task:
 
 ### 6.8 Constraining the output
 
-- Tasks A and C: bboxes are hard-constrained. The prompt provides them as ground truth and instructs the model to copy them verbatim. Post-processing verifies with regex matching.
-- Task B: bboxes appear in the user question (not generated by the model), so they are inherently constrained. The model's category description is soft-validated against the ground-truth label.
-- Task D: bboxes and the spatial relation are derived deterministically from coordinates. Post-processing verifies the relation stated in the answer is consistent.
+- Tasks A and C: bboxes are hard-constrained. The prompt provides them as ground truth and instructs the model to copy them verbatim in `[[x1, y1, x2, y2]]` format. Post-processing verifies with regex matching on `\[\[\d+,\s*\d+,\s*\d+,\s*\d+\]\]`.
+- Task B: bboxes appear in the user question (not generated by the model) in `[[x1, y1, x2, y2]]` format, so they are inherently constrained. The model's category description is soft-validated against the ground-truth label.
+- Task D: bboxes and the spatial relation are derived deterministically from coordinates. Post-processing verifies the relation stated in the answer is consistent and bboxes use `[[...]]` format.
 
 ---
 
