@@ -1,10 +1,10 @@
 # Nemotron VLM v2 OI BBox: Recaptioning Plan & Pipeline
 
-![Example image from Nemotron VLM v2 OI BBox.](./nemotron_example.png)
-
 ## 1. Dataset Overview
 
 **Source:** `gs://cohere-data/vision/agent_trajectory/v4_filtered/uncompressed/nemotron_vlm_v2_oi_bbox_2_v1/`
+
+![Example image from Nemotron VLM v2 OI BBox dataset](./nemotron_example.png)
 
 | Property | Value |
 |----------|-------|
@@ -41,6 +41,10 @@
 2. **Grammar errors** (~20% of responses): "there are 1 Man", "Here are their positions" for singular items, awkward category-name pluralization.
 3. **Question monotony**: All ~25 question templates ask the same thing (text -> bbox localization). No reverse-direction or counting tasks.
 4. **No reasoning traces**: Responses jump straight to the answer with no `<START_THINKING>...<END_THINKING>` block.
+5. **Conversion to single-turn**: We will consolidate the current multi-turn QA as meta-data to generate a single question-answer pair per turn.
+
+> [!INFO]
+> Point 5 is debatable. We could keep the multi-turn format, and for example generate multiple turns by generating each task instead of sampling 1 task per sample. I think multi-turn makes sense if we want to train the model having a longer context window with multiple related questions about the same image. In terms of data, I think we have more than enough samples to not require reusing the same image for multiple tasks.
 
 ---
 
@@ -109,12 +113,12 @@ Each `(image, category, bboxes[])` turn is randomly assigned exactly one task ty
 
 | Task | Weight | Eligibility | Notes |
 |------|--------|-------------|-------|
-| A -- Grounding (text->bbox) | 40% | All turns | Fix grammar + add reasoning. |
-| B -- Recognition (bbox->text) | 30% | All turns | Reverse direction. |
+| A -- Grounding (text->bbox) | 35% | All turns | Fix grammar + add reasoning. |
+| B -- Recognition (bbox->text) | 35% | All turns | Reverse direction. |
 | C -- Counting | 30% | All turns (see fallback) | Mix of C1/C2/C3. |
 
 **Single-bbox fallback:** When a turn is assigned Task C but has only 1 bbox:
-- 80% -> fall back to A (grounding).
+- 80% -> fall back to A or B.
 - 20% -> keep as C (counting with count=1, e.g. "Is there more than one X?" -> "No, there is exactly 1.").
 
 **Estimated final dataset size:** ~4.2M single-turn conversations (one per original turn).
