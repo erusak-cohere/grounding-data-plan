@@ -1,117 +1,155 @@
 # Visual Grounding Dataset Plan -- Team Summary
 
-## Existing Grounding-Related Data in the Mix
+## Strategy: Nemotron as Core Grounding Dataset
 
-Grounding and spatial-coordinate datasets collectively represent **~3.2%** of the current training weight. This is low compared to SotA models (Qwen3-VL, STEP3-VL) which dedicate significant portions to grounding.
+With the Nemotron OI BBox v2 recaptioning pipeline (see `nemotron_oi_bbox_recaptioning_full.md`), we gain **1.66M high-quality grounding samples** from OpenImages V7 covering 600+ categories across four task types:
 
-### By dataset family (% of grounding data, i.e. grounding = 100%):
+- **Task A** -- Grounding (text -> bbox)
+- **Task B** -- Recognition (bbox -> text)
+- **Task C** -- Counting (direct / box-based / verification)
+- **Task D** -- Relational (spatial reasoning between objects)
 
-**PixMo point annotations -- 21.2%** of grounding:
-- `pixmo_point_expl` (11.7%)
-- `openbee_honey_general_pixmo_points_explanations_v1_en` (9.5%)
-- Note: other PixMo datasets (pixmo_ama, pixmo_docs, pixmo_cap_*) are general VQA/caption, not grounding
+All with reasoning traces (`<START_THINKING>...<END_THINKING>`) and `[[x1, y1, x2, y2]]` normalized [0, 1000] coordinates.
 
-**CLEVR + Super-CLEVR (synthetic 3D scenes, counting) -- 20.9%** of grounding:
-- `openbee_honey_grounding_and_counting_clevr_v1_en` (19.8%)
-- + 3 smaller variants: super_clevr (0.5%), clevr_change (0.3%), clevr_math (0.2%)
-
-**LVIS (fine-grained detection instructions) -- 19.1%** of grounding:
-- `openbee_honey_general_lvis_instructv4_v1_en` (17.8%)
-- `mammoth_lvis_instruct4v_220k` (1.3%)
-
-**VisualGenome (scene graphs, regions) -- 10.6%** of grounding:
-- `openbee_honey_grounding_and_counting_visualgenome_v1_en` (7.7%)
-- `mammoth_visualgenome_llava_next` (2.9%)
-
-**Other grounding/counting (TQA, IconQA, MovieNet, MathV360K) -- 7.5%** of grounding
-
-**Localized Narratives (grounded captions with mouse traces) -- 6.5%** of grounding:
-- `the_cauldron_localized_narratives` (6.5%)
-
-**ShareGPT4V-SAM (grounded captions + SAM masks) -- 4.9%** of grounding
-
-**TallyQA (counting on natural images) -- 3.5%** of grounding
-
-**OCR bbox (text detection boxes) -- 3.0%** of grounding:
-- ctw_bbox, hiertext_bbox, rects_cropped, rects_full, mammoth_rects, openbee_ocr_rects
-
-**Visual7W (pointing QA) -- 2.7%** of grounding
-
-**Objects365 (object detection, 365 categories) -- 0.3%** of grounding (!!):
-- Only 296 packed rows
+This subsumes the majority of existing grounding datasets in the mix and eliminates most planned new ingestions. The plan below retains only datasets that provide **unique modalities** Nemotron does not cover.
 
 ---
 
-## Key Gap Analysis
+## Existing Grounding Data in the Mix
 
-Compared to SotA (Qwen3-VL, STEP3-VL):
+Grounding and spatial-coordinate datasets collectively represent **~3.2%** of the current training weight (balanced config). Below is the status of each family after reassessment.
 
-1. **No RefCOCO/+/g** -- the classic referring expression benchmark family, used by Qwen3-VL for training
-2. **Objects365 is negligible** -- 296 packed rows vs. millions of annotations in SotA recipes
-3. **No Merlin** -- used by STEP3-VL for both bbox and point grounding
-4. **No OpenImages detection** -- used by both Qwen3-VL and STEP3-VL at scale
-5. **No reasoning traces for grounding** -- SotA models (Long Grounded Thoughts, Perception-R1) show CoT improves spatial understanding
-6. **Total grounding is ~3.2%** -- likely insufficient for competitive spatial understanding
+### KEEP -- Unique modalities not covered by Nemotron
+
+**PixMo point annotations -- 0.668% of total weight:**
+- `pixmo_point_expl` (0.369%)
+- `openbee_honey_general_pixmo_points_explanations_v1_en` (0.299%)
+- **Why keep:** Point annotations are a fundamentally different spatial modality (pointing to locations vs. drawing boxes). Nemotron has zero point data.
+
+**LVIS (fine-grained detection instructions) -- 0.602% of total weight:**
+- `openbee_honey_general_lvis_instructv4_v1_en` (0.561%)
+- `mammoth_lvis_instruct4v_220k` (0.041%) -- remove this duplicate, keep openbee only.
+- **Why keep:** 1200+ fine-grained categories (double OpenImages' 600+), with detailed instruction format. Provides category granularity Nemotron may not cover. Reassess after ablation results.
+
+**OCR BBox / text detection -- 0.091% of total weight:**
+- `ctw_bbox_v1`, `hiertext_bbox_v1`, `rects_cropped`, `rects_full`, `mammoth_rects_train`
+- needs bbox conversion from [0-1] floats to [0, 1000] integers for `hiertext_bbox_v1` and `ctw_bbox_v1`.
+- **Why keep:** Text detection in images is a completely different task from object detection. Nemotron has no OCR data.
+
+**Localized Narratives -- 0.205% of total weight:**
+- `the_cauldron_localized_narratives` (0.205%)
+- **Why keep:** Grounded captions linking narrative text to image regions via mouse traces. Unique annotation style not covered by Nemotron.
+
+### DROP -- Subsumed by Nemotron
+
+**CLEVR + Super-CLEVR (synthetic) -- 1.336% of total weight (12 datasets):**
+- All CLEVR variants: `openbee_honey_grounding_and_counting_clevr_v1_en`, `clevr_math_train`, `cambrian_10m_clevr`, `mammoth_clevr_700k`, `super_clevr_train`, `the_cauldron_clevr`, `openbee_honey_grounding_and_counting_super_clevr_v1_en`, `mammoth_super_clevr`, `openbee_honey_grounding_and_counting_clevr_math_v1_en`, `mammoth_clevr_math`, `mammoth_internvl2_llama3_super_clevr`, `openbee_honey_grounding_and_counting_clevr_change_v1_en`
+- **Why drop:** Synthetic 3D rendered geometric shapes. Nemotron's counting tasks (C1/C2/C3) on real photos provide more relevant counting capability. Balanced-weight ablation already showed no regression when removing CLEVR duplicates.
+
+**VisualGenome -- 0.333% of total weight (2 datasets):**
+- `openbee_honey_grounding_and_counting_visualgenome_v1_en`, `mammoth_visualgenome_llava_next`
+- **Why drop:** Known repetition bug in turns. Uses [0-1] floats requiring reprocessing. Nemotron's consolidated scene annotations + Task B (recognition) cover region descriptions at 200x the scale.
+
+**TallyQA -- 0.295% of total weight (4 datasets):**
+- `cambrian_10m_tallyqa`, `openbee_honey_grounding_and_counting_tallyqa_v1_en`, `the_cauldron_tallyqa`, `mammoth_tallyqa`
+- **Why drop:** Pure counting on natural images. Nemotron's Task C (3 sub-formulations: direct, box-based, verification) is a direct and much larger replacement.
+
+**ShareGPT4V-SAM -- 0.154% of total weight (2 datasets):**
+- `openbee_honey_general_sharegpt4v_sam_v1_en`, `mammoth_sharegpt4v_sam`
+- **Why drop:** Mixed coordinate formats ([0-1] floats AND raw pixel integers in same turns) actively confuse the model. Nemotron provides clean, consistent grounding data.
+
+**IconQA -- 0.197% of total weight (5 datasets):**
+- `openbee_honey_general_iconqa_v1_en`, `openbee_honey_grounding_and_counting_iconqa_v1_en`, `the_cauldron_iconqa`, `mammoth_iconqa`, `mammoth_internvl2_llama3_iconqa`
+- **Why drop:** Abstract icon-based diagrams, not natural images. Does not contribute to spatial grounding on real photos.
+
+**Visual7W -- 0.085% of total weight (3 datasets):**
+- `openbee_honey_general_visual7w_v1_en`, `mammoth_visual7w`, `the_cauldron_visual7w`
+- **Why drop:** Pointing QA, small scale. Covered by Nemotron's Task B (recognition) and Task D (relational).
+
+**Objects365 -- 0.008% of total weight (1 dataset):**
+- `openbee_honey_general_objects365_v1_en` (296 packed rows)
+- **Why drop:** Negligible scale. Objects365's 365 categories are largely a subset of OpenImages' 600+. Nemotron covers object detection at 5000x the scale.
+
+**Other tiny datasets (TQA, MathV360K, MovieNet, Other) -- 0.157% of total weight:**
+- `openbee_honey_grounding_and_counting_tqa_v1_en`, `openbee_honey_grounding_and_counting_mathv360k_vqa_as_v1_en`, `openbee_honey_grounding_and_counting_movienet_v1_en`, `openbee_honey_grounding_and_counting_other_v1_en`
+- **Why drop:** Combined <1K packed rows. Marginal value given Nemotron's scale.
 
 ---
 
-## Datasets to Download and Ingest
+## Gap Analysis (updated)
 
-All new datasets will use **[0, 1000] normalized coordinates** (Qwen3-VL convention, see below). Existing coordinate datasets will also be reprocessed to this format.
+Previous gaps compared to SotA (Qwen3-VL, STEP3-VL) and how Nemotron addresses them:
 
-### Batch 1: Core Grounding (priority)
+| Gap | Status |
+|-----|--------|
+| No RefCOCO/+/g | **Closed by Nemotron.** 1.66M grounding + recognition samples subsume RefCOCO's ~70K rows. No separate ingestion needed. |
+| Objects365 is negligible (296 rows) | **Closed by Nemotron.** OpenImages V7 600+ categories at 1.66M scale. |
+| No OpenImages detection | **Closed by Nemotron.** Nemotron IS OpenImages V7 detection data. |
+| No reasoning traces for grounding | **Closed by Nemotron.** All recaptioned 1.66M samples will include `<START_THINKING>...<END_THINKING>` reasoning. |
+| Total grounding is ~3.2% | **Will increase** with Nemotron added to the mix. Exact weight TBD from ablation results. |
+| No Merlin | **Cannot address.** Dataset never publicly released. |
 
-| Dataset | Description | Size | Source |
+**Remaining gaps:**
+- No GUI grounding (GroundUI-18K is eval-only, deferred).
+- Point grounding limited to PixMo (no Merlin).
+
+---
+
+## Datasets to Ingest
+
+### Active
+`
+| Dataset | Description | Size | Status |
 |---------|-------------|------|--------|
-| **RefCOCO** | Referring expression comprehension on COCO images. Short expressions (avg 3.5 words), allows location words. 14% label error rate. | ~120K expressions, ~20K images |https://github.com/lichengunc/refer |
-| **RefCOCO+** | Same as RefCOCO but location words forbidden (appearance-only). 24% label error rate. | ~120K expressions |https://github.com/lichengunc/refer|
-| **RefCOCOg** | Longer, more complex referring expressions (avg 8.4 words). 5% error rate. | ~85K expressions |https://github.com/lichengunc/refer|
-| **Ref-L4 quality flags** | Reviewed annotations marking errors in RefCOCO/+/g with `caption_quality=0`. Use to filter bad labels. Ref-L4's own data (45K annotations on Objects365 images) is eval-only. | Annotations only | `JierunChen/Ref-L4` |
-| **Objects365** (scale-up) | Large-scale object detection across 365 categories. Current version has only 296 packed rows. Download 200K subset with category balancing. | 200K subset (from 1.74M train total) | `jxu124/objects365` |
-| **Long Grounded Thoughts (stage1)** | MCQ visual reasoning with long CoT traces. Synthesized from DOCCI images + Grounded-SAM bboxes. Key "with-reasoning" grounding dataset. | 753K SFT examples, 15K DOCCI images | `nvidia/nemotron-research-LGT` |
-| **VisionFoundry-10K** | Synthetic perception triples covering 10 spatial tasks (orientation, viewpoint, depth, spatial relations). Fully synthetic T2I images. | 10K samples | `zlab-princeton/VisionFoundry-10K` |
-| **FSC147** | Few-shot counting dataset (147 object categories). Used by STEP3-VL for counting.  | 6,135 images | [Kaggle](https://www.kaggle.com/datasets/xuncngng/fsc147-0) |
-| **OODVQA** (full) | OOD VQA + counting on distribution-shifted images (unusual styles, sketches). From "How Many Unicorns" (ECCV 2024). We have ~half already via cambrian. | ~8.5K rows total | [UCSC-VLAA](https://github.com/UCSC-VLAA/vllm-safety-benchmark) |
-| **OpenImages V7 Detection** (100K subset) | Category-balanced subset of OpenImages detection. 600 object classes. Used by Qwen3-VL and STEP3-VL. | 100K images (from 1.9M total) | `vikhyatk/openimages-bbox` |
+| **Nemotron OI BBox v2 (recaptioned)** | Core grounding dataset. 4 task types, reasoning traces, `[[x1,y1,x2,y2]]` format. See `nemotron_oi_bbox_recaptioning_full.md`. | ~1.66M samples | Recaptioning pipeline: TODO |
+| **Long Grounded Thoughts (stage1)** | MCQ visual reasoning with long CoT traces. Synthesized from DOCCI images + Grounded-SAM bboxes. Unique reasoning-heavy grounding format. | 753K SFT examples, 15K DOCCI images | TODO |
+| **VisionFoundry-10K** | Synthetic perception triples covering 10 spatial tasks (orientation, viewpoint, depth, spatial relations). Complements Nemotron with tasks it doesn't cover. | 10K samples | Ablation running |
 
-### Batch 2: Large-Scale Detection
-
-| Dataset | Description | Size | Source |
-|---------|-------------|------|--------|
-| **OpenImages Localized Narratives** | **Deferred to P2 (recapping).** We already have 200K rows via `the_cauldron_localized_narratives` (plain captions, no spatial data). The full dataset (671K) adds mouse traces that spatially ground each word to image regions -- useful as metadata for recapping. | 671K narratives | `HuggingFaceM4/LocalizedNarratives` |
-
-### Dropped / Deferred
+### Dropped (subsumed by Nemotron)
 
 | Dataset | Reason |
 |---------|--------|
-| **Merlin** | Dataset never publicly released. Open GitHub issues requesting data since Mar 2024 remain unanswered. STEP3-VL likely used an internal copy. |
-| **GroundUI-18K** | Test set only. GUI grounding deferred to future batch. |
-| **Long Grounded Thoughts stage2 / DPO** | Ingest stage1 first, evaluate quality. |
-| **Recapping grounding datasets with Qwen3.6** | P2 priority. Currently recapping Openbee; will extend to grounding datasets later. |
+| **RefCOCO/+/g** | 70K rows vs. Nemotron's 1.66M. Grounding + recognition tasks fully subsumed. Avoiding evaluation contamination is an additional benefit. |
+| **Objects365 (200K expansion)** | Objects365's 365 categories are a subset of OpenImages' 600+. Nemotron covers this at 8x the planned scale. |
+| **OpenImages V7 Detection (100K)** | Nemotron IS OpenImages data. Completely redundant. |
+| **FSC147** | Few-shot counting subsumed by Nemotron's counting tasks (C1/C2/C3) at much larger scale. |
+| **OODVQA** | Low priority. Small scale (~8.5K rows). Could revisit if OOD robustness is a concern. |
+
+### Deferred
+
+| Dataset | Reason |
+|---------|--------|
+| **Merlin** | Never publicly released. |
+| **GroundUI-18K** | Test set only. GUI grounding deferred. |
+| **LGT stage2 / DPO** | Ingest stage1 first, evaluate quality. |
+| **OpenImages Localized Narratives (full)** | Low priority. We already have 200K rows via `the_cauldron_localized_narratives`. |
 
 ---
 
-## Coordinate Reprocessing
+## Coordinate Format
 
-We should switch all bounding box / point coordinates to **integer [0, 1000] format** (i.e. coordinates normalized to 0-999 integers). Evidence supporting this choice:
+All bounding box coordinates use **integer [0, 1000] normalized format**, rendered as `[[x1, y1, x2, y2]]` (double brackets, no special tokenizer tokens). Evidence:
 
 - **Qwen3-VL** (arXiv:2511.21631) uses [0, 1000] range for all grounding coordinates.
-- **ChartPoint** (arXiv:2512.00305, ICCV 2025) ran an explicit ablation (Table 7): integer [0-999] coordinates outperform normalized [0-1] decimals by +1.16% on ChartQA. The paper notes that Qwen's tokenizer splits decimals into three-digit segments, increasing token-level training difficulty for floating-point formats.
+- **ChartPoint** (arXiv:2512.00305, ICCV 2025): integer [0-999] outperforms [0-1] decimals by +1.16% on ChartQA.
+- **No tokenizer update needed:** Double brackets are standard text tokens handled natively by any tokenizer (following InternVL's approach).
 
-After inspecting text samples from all candidate datasets (via uncompressed JSONL shards), only **3 datasets** in the current mix actually contain coordinates in the text. All other grounding/counting datasets (CLEVR, TallyQA, LVIS, Objects365, rects, pixmo_points, etc.) encode tasks as pure text Q&A without explicit spatial coordinates.
+Datasets being kept (PixMo, LVIS, OCR BBox, Localized Narratives) encode tasks as pure text Q&A without explicit spatial coordinates in the text, so no coordinate reprocessing is needed for them. The only dataset that previously required coordinate reprocessing (`openbee_honey_grounding_and_counting_visualgenome_v1_en` and `openbee_honey_general_sharegpt4v_sam_v1_en`) are being dropped.
 
-**Datasets with coordinates (must reprocess to [0, 1000]):**
-
-- `openbee_honey_grounding_and_counting_visualgenome_v1_en` -- [0-1] floats, e.g. `[0.708,0.787,0.728,0.838]`
-- `hiertext_bbox_v1` -- [0-1] floats in JSON, e.g. `"bbox": [0.07, 0.22, 0.61, 0.27]`
-- `openbee_honey_general_sharegpt4v_sam_v1_en` -- **mixed formats!** [0-1] floats for input regions (e.g. `[0.65, 0.19, 0.83, 0.69]`) AND raw pixel integers for bbox output (e.g. `"bbox_2d": [59, 118, 361, 478]`)
-
-**Issue: the current mix has inconsistent coordinate formats.** `sharegpt4v_sam` uses both [0-1] normalized floats and raw pixel-value integers within the same conversation turns. This means the model is trained on conflicting coordinate conventions, which likely hurts grounding performance.
+`hiertext_bbox_v1`, `ctw_bbox_v1` (OCR BBox, kept) use [0-1] floats in the text and should be reprocessed to [0, 1000] integers.
 
 ---
 
 ## Implementation
 
-All ingestion goes through the `data_acquisition` pipeline in a dedicated git worktree. Each dataset gets a `process.py` implementing `BaseDatasetAcquisition.transform_row()`, outputting the `multimodal_ift` schema (images + conversations) to GCS as parquet.
+**Priority 1:** Nemotron OI BBox v2 recaptioning pipeline (see `nemotron_oi_bbox_recaptioning_full.md`). VisionFoundry-10K (ablation already running).
 
-Batch 1 (all parallel): RefCOCO/+/g + Ref-L4, Objects365 200K, LGT stage1, VisionFoundry-10K, FSC147, OODVQA, OpenImages V7 100K, reprocess 3 existing coord datasets. Batch 2 (deferred): OpenImages Loc. Narratives, LGT stage2/DPO, recapping with Qwen3.6.
+**Priority 2:** Long Grounded Thoughts stage1 ingestion.
+
+**Cleanup:** Set weights of all dropped datasets to 0 in the training config. Redistribute freed weight (~2.5% of total) to Nemotron and remaining datasets based on ablation results.
+
+**Ablations in progress:**
+- VisionFoundry-10K: aggressive replace, conservative replace, append (configs ready)
+- Nemotron (pre-recaptioning): aggressive replace, conservative replace (configs ready)
+
+See `mm-configs-grounding-ablation/bls/vision/sft/` for all ablation `.run` and `_sweep.py` files.
