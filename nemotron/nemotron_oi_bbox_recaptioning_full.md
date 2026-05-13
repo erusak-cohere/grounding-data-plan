@@ -45,7 +45,7 @@
 
 ### 1.3 Current format issues (why we need recaptioning)
 
-1. **Markup tokens**: Uses `<ref>Object</ref>:<box>[x1, y1, x2, y2]</box>` -- must be converted to plain `[[x1, y1, x2, y2]]` double-bracket format and `<ref></ref>` must be removed. No special tokenizer tokens are used; double brackets are standard text tokens that any tokenizer handles natively (following InternVL's approach).
+1. **Markup tokens**: Uses `<ref>Object</ref>:<box>[x1, y1, x2, y2]</box>` -- must be converted to plain `<box>[x1, y1, x2, y2]</box>` format and `<ref></ref>` must be removed. No special tokenizer tokens are used; `<box>` / `</box>` are standard text tokens that any tokenizer handles natively. This format is unambiguous (zero false positives in natural text) and trivially extractable via regex.
 2. **Grammar errors** (~20% of responses): "there are 1 Man", "Here are their positions" for singular items, awkward category-name pluralization.
 3. **Question monotony**: All ~25 question templates ask the same thing (text -> bbox localization). No reverse-direction, counting, or relational tasks.
 4. **No reasoning traces**: Responses jump straight to the answer with no `<START_THINKING>...<END_THINKING>` block.
@@ -67,9 +67,9 @@ Before (multi-turn):
 
 After (consolidated):
   Scene annotation for this image:
-    House:  [[61,55,606,521], [569,147,811,460], [834,274,931,405], [933,211,999,401]]
-    Tree:   [[291,25,382,97], [954,60,999,250]]
-    Window: [[5,198,18,257], [138,746,143,805], ...]
+    House:  <box>[61,55,606,521]</box> <box>[569,147,811,460]</box> <box>[834,274,931,405]</box> <box>[933,211,999,401]</box>
+    Tree:   <box>[291,25,382,97]</box> <box>[954,60,999,250]</box>
+    Window: <box>[5,198,18,257]</box> <box>[138,746,143,805]</box> ...
 ```
 
 This consolidated scene annotation becomes the ground truth passed to Qwen. It enables richer questions that reference multiple object types, spatial relationships, and full-scene understanding.
@@ -79,7 +79,7 @@ This consolidated scene annotation becomes the ground truth passed to Qwen. It e
 - One Q+A conversation per image (1 sample = 1 output).
 - Each sample is randomly assigned **exactly one** of four task types (A/B/C/D).
 - Every assistant response includes a `<START_THINKING>...<END_THINKING>` reasoning trace.
-- All bboxes use `[[x1, y1, x2, y2]]` double-bracket format (no special tokens, no tokenizer update needed).
+- All bboxes use `<box>[x1, y1, x2, y2]</box>` format (no special tokenizer tokens, no tokenizer update needed).
 
 **Estimated final dataset size:** ~1.66M single-turn conversations (one per image).
 
@@ -99,8 +99,8 @@ Chatbot: <START_THINKING>I need to locate all instances of flowers in the image.
 see two flowers -- one near the center-left area and another toward the upper-right
 corner.<END_THINKING>
 I found 2 flowers in this image:
-1. [[463, 488, 528, 631]]
-2. [[818, 198, 852, 293]]
+1. <box>[463, 488, 528, 631]</box>
+2. <box>[818, 198, 852, 293]</box>
 ```
 
 ### Task B -- Recognition (bbox -> text)
@@ -110,17 +110,17 @@ Provide bboxes in the question and ask the model to identify what they contain. 
 **Example (cross-category, leveraging consolidation):**
 
 ```
-User: What can you see at [[61, 55, 606, 521]],
-[[291, 25, 382, 97]], and
-[[5, 198, 18, 257]]?
+User: What can you see at <box>[61, 55, 606, 521]</box>,
+<box>[291, 25, 382, 97]</box>, and
+<box>[5, 198, 18, 257]</box>?
 Chatbot: <START_THINKING>I'll examine each region. The first is a large area in the
 upper-left showing a white two-story house. The second is a small area at the top
 containing a tree canopy. The third is a narrow vertical strip on the left edge
 showing a window frame.<END_THINKING>
 The objects at the specified locations are:
-1. [[61, 55, 606, 521]] -- A white two-story house with a red roof.
-2. [[291, 25, 382, 97]] -- A tree canopy with green leaves.
-3. [[5, 198, 18, 257]] -- A narrow window with a dark frame.
+1. <box>[61, 55, 606, 521]</box> -- A white two-story house with a red roof.
+2. <box>[291, 25, 382, 97]</box> -- A tree canopy with green leaves.
+3. <box>[5, 198, 18, 257]</box> -- A narrow window with a dark frame.
 ```
 
 ### Task C -- Counting (derived from detection annotations)
@@ -158,12 +158,12 @@ For images where 2+ categories each have exactly 1 bbox and the bboxes are spati
 
 ```
 User: What is the spatial relationship between the tree and the car in this image?
-Chatbot: <START_THINKING>The tree is located at [[3, 27, 436, 478]], which places it
-in the upper-left portion of the image. The car is at [[11, 385, 999, 744]], which
+Chatbot: <START_THINKING>The tree is located at <box>[3, 27, 436, 478]</box>, which places it
+in the upper-left portion of the image. The car is at <box>[11, 385, 999, 744]</box>, which
 occupies the lower-right area. Comparing their positions, the tree is above and to
 the left of the car.<END_THINKING>
-The tree [[3, 27, 436, 478]] is above and to the left of
-the car [[11, 385, 999, 744]].
+The tree <box>[3, 27, 436, 478]</box> is above and to the left of
+the car <box>[11, 385, 999, 744]</box>.
 ```
 
 **Question format variants:**
@@ -290,8 +290,9 @@ Per-task validation rules:
 | Check | A | B | C1 | C2 | C3 | D |
 |-------|---|---|----|----|-----|---|
 | `<START_THINKING>...<END_THINKING>` present | Yes | Yes | Yes | Yes | Yes | Yes |
-| No legacy `<ref>` / `<box>` / `<\|box_start\|>` / `<\|box_end\|>` tags | Yes | Yes | Yes | Yes | Yes | Yes |
-| All bboxes use `[[x1, y1, x2, y2]]` format | Yes | Yes | -- | Yes | -- | Yes |
+| No legacy `<ref>` / `<\|box_start\|>` / `<\|box_end\|>` tags | Yes | Yes | Yes | Yes | Yes | Yes |
+| All bboxes use `<box>[x1, y1, x2, y2]</box>` format | Yes | Yes | -- | Yes | -- | Yes |
+| No gold bbox leakage in thinking (coordinates or meta-phrases) | Yes | Yes | Yes | Yes | Yes | Yes |
 | All GT bboxes in answer (exact match) | Yes | -- | -- | Yes | -- | Yes |
 | Bboxes from question echoed in answer | -- | Yes | -- | -- | -- | -- |
 | Count in answer matches GT | -- | -- | Yes | Yes | Yes | -- |
@@ -303,11 +304,24 @@ Failed validation: retry once with the same prompt, then discard.
 
 ### 5.7 Pipeline execution
 
+The pipeline builds on the existing openbee recaptioning infrastructure in `hf_deployer_recaptioning/data_recaptioning/`. Key components to reuse:
+
+- **`ClientPool` / `LoadBalancedOpenAIClient`**: Connection pooling and load balancing across vLLM endpoints.
+- **`BufferedTrajectoryIterator`**: Lazy JSONL reading with backpressure via a bounded queue.
+- **`run_concurrent_with_ui`**: Concurrent processing with Rich terminal UI, accepted/discarded/errors routing, and automatic resume via ID-based deduplication.
+- **YAML config**: Endpoint URLs, model params, concurrency settings, I/O paths.
+
+The nemotron pipeline adds a preprocessing layer (consolidation + task assignment) before the API call, and a task-specific validator after. The `run_inference` function is adapted to:
+1. Consolidate the multi-turn input into a scene annotation.
+2. Assign a task type and build the Qwen prompt.
+3. Call the API (single pass per sample).
+4. Validate the output (bbox format, leakage check, task-specific rules).
+5. Emit a single-turn output trajectory.
+
 - Processes one shard at a time (or a range via CLI).
-- Uses `asyncio` + `httpx` for concurrent API calls (configurable, e.g. 64 in-flight).
-- Writes one output JSONL per input shard.
+- Writes results to `accepted/`, `discarded/`, `errors/` directories per shard file.
 - Logs progress: shard number, samples processed, pass/fail/retry counts per task type.
-- CLI: `python pipeline.py --shards 0-100 --api-url http://... --concurrency 64 --output-dir /path/`
+- CLI: `python -m nemotron_recaptioning.pipeline --config configs/nemotron.yaml`
 
 ### 5.8 Output format
 
@@ -319,7 +333,7 @@ Each output line follows the **exact same schema** as the input JSONL. The image
     "mm_id": "336b7aab7c15ebd845019fa297bc99dac0f72d8d9680280be09c98ef30ba96ca",
     "task_type": "D",
     "scene_annotation": [
-      {"category": "Tree", "bboxes": [[3, 27, 436, 478]]},
+      {"category": "Tree", "bboxes": [[3, 27, 436, 478]]},    
       {"category": "Land vehicle", "bboxes": [[11, 385, 999, 744]]}
     ],
     "validation_passed": true
@@ -364,7 +378,7 @@ Each output line follows the **exact same schema** as the input JSONL. The image
       "contents": [
         {
           "metadata": null,
-          "text": "<START_THINKING>The tree is at [[3, 27, 436, 478]]...<END_THINKING>\nThe tree [[3, 27, 436, 478]] is above and to the left of the car [[11, 385, 999, 744]].",
+          "text": "<START_THINKING>The tree is in the upper-left portion of the image, while the car occupies the lower-right area. Comparing their positions, the tree is above and to the left of the car.<END_THINKING>\nThe tree <box>[3, 27, 436, 478]</box> is above and to the left of the car <box>[11, 385, 999, 744]</box>.",
           "language_id": null,
           "grounding_spans": null,
           "content_type": "text"
@@ -403,12 +417,14 @@ Rules:
 - The bounding boxes are given to you as ground truth in normalized [0, 1000] format.
   You MUST use them exactly as provided -- do not change, reorder, or invent any
   coordinates.
-- Format every bounding box as: [[x1, y1, x2, y2]]
-  (double brackets, comma-separated integers, no special tokens).
-- Do NOT use <ref></ref>, <box></box>, <|box_start|>, or <|box_end|> tags.
+- Format every bounding box as: <box>[x1, y1, x2, y2]</box>
+  (wrapped in box tags, comma-separated integers).
+- Do NOT use <ref></ref>, <|box_start|>, or <|box_end|> tags.
 - The reasoning block should describe what you observe in the image that leads you to the
-  answer. Be specific about visual appearance, position, and context. Keep it concise
-  (2-4 sentences).
+  answer. Be specific about visual appearance, position, and context. Do NOT reference
+  the ground-truth data, the provided annotations, or the fact that bounding boxes were
+  given to you. Write as if you are seeing the image for the first time and discovering
+  the objects yourself. Keep it concise (2-4 sentences).
 - Vary the question phrasing naturally. Do not always use the same template.
 - Use correct English grammar. Pay attention to singular vs. plural agreement.
 - When the category name is a compound noun (e.g., "Human face", "Land vehicle"), use
@@ -430,12 +446,13 @@ consisting of:
 
 Rules:
 - The bounding boxes are given in normalized [0, 1000] format. Format every bounding box
-  as: [[x1, y1, x2, y2]]
-  (double brackets, comma-separated integers, no special tokens).
-- Do NOT use <ref></ref>, <box></box>, <|box_start|>, or <|box_end|> tags.
+  as: <box>[x1, y1, x2, y2]</box>
+  (wrapped in box tags, comma-separated integers).
+- Do NOT use <ref></ref>, <|box_start|>, or <|box_end|> tags.
 - The user question should embed the bounding boxes and ask about their contents.
 - In the reasoning block, describe what you actually see in each region of the image --
   appearances, colors, context, spatial relationships. Be specific and visually grounded.
+  Do NOT reference the ground-truth data or the fact that annotations were provided.
   Keep it concise (2-4 sentences).
 - The final answer should identify each object with a brief natural-language description
   that goes beyond just repeating the category name. Mention distinctive visual attributes
@@ -461,9 +478,10 @@ Rules:
 - The count is given to you as ground truth. You MUST state the exact count provided --
   do not change it.
 - Do NOT include any bounding boxes in the answer. Only state the count.
-- Do NOT use <ref></ref>, <box></box>, <|box_start|>, or <|box_end|> tags.
+- Do NOT use <ref></ref>, <|box_start|>, or <|box_end|> tags.
 - The reasoning should walk through the counting process -- describe scanning the image
-  and identifying each instance. Keep it concise (2-4 sentences).
+  and identifying each instance. Do NOT reference the ground-truth data or the fact that
+  annotations were provided. Keep it concise (2-4 sentences).
 - Vary the question phrasing naturally.
 - Use correct English grammar with proper singular/plural agreement.
 ```
@@ -486,11 +504,12 @@ consisting of:
 Rules:
 - The count and bounding boxes are given to you as ground truth. You MUST use them
   exactly -- do not change the count or invent/omit any bounding boxes.
-- Format every bounding box as: [[x1, y1, x2, y2]]
-  (double brackets, comma-separated integers, no special tokens).
-- Do NOT use <ref></ref>, <box></box>, <|box_start|>, or <|box_end|> tags.
+- Format every bounding box as: <box>[x1, y1, x2, y2]</box>
+  (wrapped in box tags, comma-separated integers).
+- Do NOT use <ref></ref>, <|box_start|>, or <|box_end|> tags.
 - The reasoning should walk through the counting process -- describe scanning the image
-  and identifying each instance. Keep it concise (2-4 sentences).
+  and identifying each instance. Do NOT reference the ground-truth data or the fact that
+  annotations were provided. Keep it concise (2-4 sentences).
 - Vary the question phrasing naturally.
 - Use correct English grammar with proper singular/plural agreement.
 ```
@@ -516,9 +535,10 @@ Rules:
   - "More/fewer than N": compare the actual count against N.
   - "Exactly N": check whether the actual count equals N.
 - Do NOT include bounding boxes in the answer.
-- Do NOT use <ref></ref>, <box></box>, <|box_start|>, or <|box_end|> tags.
+- Do NOT use <ref></ref>, <|box_start|>, or <|box_end|> tags.
 - The reasoning should walk through the counting process -- describe scanning the image
-  and counting each instance. Keep it concise (2-4 sentences).
+  and counting each instance. Do NOT reference the ground-truth data or the fact that
+  annotations were provided. Keep it concise (2-4 sentences).
 - Vary the question phrasing naturally.
 - Use correct English grammar with proper singular/plural agreement.
 ```
@@ -538,12 +558,13 @@ turn consisting of:
 
 Rules:
 - The bounding boxes are given in normalized [0, 1000] format. Format every bounding box
-  as: [[x1, y1, x2, y2]]
-  (double brackets, comma-separated integers, no special tokens).
-- Do NOT use <ref></ref>, <box></box>, <|box_start|>, or <|box_end|> tags.
+  as: <box>[x1, y1, x2, y2]</box>
+  (wrapped in box tags, comma-separated integers).
+- Do NOT use <ref></ref>, <|box_start|>, or <|box_end|> tags.
 - In the reasoning block, describe the positions of both objects and explain how you
-  determined their spatial relationship. Keep it concise (2-4 sentences).
-- The answer must include both bounding boxes in [[x1, y1, x2, y2]] format.
+  determined their spatial relationship. Do NOT reference the ground-truth data or the
+  fact that annotations were provided. Keep it concise (2-4 sentences).
+- The answer must include both bounding boxes in <box>[x1, y1, x2, y2]</box> format.
 - The spatial relationship must be consistent with the actual coordinates provided.
 - Vary the question format:
   - Yes/no: "Is the X to the right of the Y?"
@@ -583,9 +604,10 @@ Where `{task_specific_fields}` varies by task:
 
 ### 6.8 Constraining the output
 
-- Tasks A and C: bboxes are hard-constrained. The prompt provides them as ground truth and instructs the model to copy them verbatim in `[[x1, y1, x2, y2]]` format. Post-processing verifies with regex matching on `\[\[\d+,\s*\d+,\s*\d+,\s*\d+\]\]`.
-- Task B: bboxes appear in the user question (not generated by the model) in `[[x1, y1, x2, y2]]` format, so they are inherently constrained. The model's category description is soft-validated against the ground-truth label.
-- Task D: bboxes and the spatial relation are derived deterministically from coordinates. Post-processing verifies the relation stated in the answer is consistent and bboxes use `[[...]]` format.
+- Tasks A and C: bboxes are hard-constrained. The prompt provides them as ground truth and instructs the model to copy them verbatim in `<box>[x1, y1, x2, y2]</box>` format. Post-processing verifies with regex matching on `<box>\[\d+,\s*\d+,\s*\d+,\s*\d+\]</box>`.
+- Task B: bboxes appear in the user question (not generated by the model) in `<box>[x1, y1, x2, y2]</box>` format, so they are inherently constrained. The model's category description is soft-validated against the ground-truth label.
+- Task D: bboxes and the spatial relation are derived deterministically from coordinates. Post-processing verifies the relation stated in the answer is consistent and bboxes use `<box>...</box>` format.
+- All tasks: the `<START_THINKING>...<END_THINKING>` block is checked for gold bbox leakage (exact coordinate strings from the GT set appearing inside thinking, or meta-phrases like "provided", "given", "ground truth", "annotation"). Samples that fail this check are retried once, then discarded.
 
 ---
 

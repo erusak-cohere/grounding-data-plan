@@ -9,7 +9,7 @@ With the Nemotron OI BBox v2 recaptioning pipeline (see `nemotron_oi_bbox_recapt
 - **Task C** -- Counting (direct / box-based / verification)
 - **Task D** -- Relational (spatial reasoning between objects)
 
-All with reasoning traces (`<START_THINKING>...<END_THINKING>`) and `[[x1, y1, x2, y2]]` normalized [0, 1000] coordinates.
+All with reasoning traces (`<START_THINKING>...<END_THINKING>`) and `<box>[x1, y1, x2, y2]</box>` normalized [0, 1000] coordinates.
 
 This subsumes the majority of existing grounding datasets in the mix and eliminates most planned new ingestions. The plan below retains only datasets that provide **unique modalities** Nemotron does not cover.
 
@@ -101,7 +101,7 @@ Previous gaps compared to SotA (Qwen3-VL, STEP3-VL) and how Nemotron addresses t
 `
 | Dataset | Description | Size | Status |
 |---------|-------------|------|--------|
-| **Nemotron OI BBox v2 (recaptioned)** | Core grounding dataset. 4 task types, reasoning traces, `[[x1,y1,x2,y2]]` format. See `nemotron_oi_bbox_recaptioning_full.md`. | ~1.66M samples | Recaptioning pipeline: TODO |
+| **Nemotron OI BBox v2 (recaptioned)** | Core grounding dataset. 4 task types, reasoning traces, `<box>[x1,y1,x2,y2]</box>` format. See `nemotron_oi_bbox_recaptioning_full.md`. | ~1.66M samples | Recaptioning pipeline: TODO |
 | **Long Grounded Thoughts (stage1)** | MCQ visual reasoning with long CoT traces. Synthesized from DOCCI images + Grounded-SAM bboxes. Unique reasoning-heavy grounding format. | 753K SFT examples, 15K DOCCI images | TODO |
 | **VisionFoundry-10K** | Synthetic perception triples covering 10 spatial tasks (orientation, viewpoint, depth, spatial relations). Complements Nemotron with tasks it doesn't cover. | 10K samples | Ablation running |
 
@@ -128,11 +128,11 @@ Previous gaps compared to SotA (Qwen3-VL, STEP3-VL) and how Nemotron addresses t
 
 ## Coordinate Format
 
-All bounding box coordinates use **integer [0, 1000] normalized format**, rendered as `[[x1, y1, x2, y2]]` (double brackets, no special tokenizer tokens). Evidence:
+All bounding box coordinates use **integer [0, 1000] normalized format**, rendered as `<box>[x1, y1, x2, y2]</box>` (HTML-style box tags, no special tokenizer tokens). Evidence:
 
 - **Qwen3-VL** (arXiv:2511.21631) uses [0, 1000] range for all grounding coordinates.
 - **ChartPoint** (arXiv:2512.00305, ICCV 2025): integer [0-999] outperforms [0-1] decimals by +1.16% on ChartQA.
-- **No tokenizer update needed:** Double brackets are standard text tokens handled natively by any tokenizer (following InternVL's approach).
+- **No tokenizer update needed:** `<box>` / `</box>` are standard text tokens handled natively by any tokenizer. This format is unambiguous (zero false positives in natural text) and trivially extractable via regex.
 
 Datasets being kept (PixMo, LVIS, OCR BBox, Localized Narratives) encode tasks as pure text Q&A without explicit spatial coordinates in the text, so no coordinate reprocessing is needed for them. The only dataset that previously required coordinate reprocessing (`openbee_honey_grounding_and_counting_visualgenome_v1_en` and `openbee_honey_general_sharegpt4v_sam_v1_en`) are being dropped.
 
