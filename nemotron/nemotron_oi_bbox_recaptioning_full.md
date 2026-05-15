@@ -275,8 +275,8 @@ def consolidate_sample(raw_sample: dict) -> dict:
         "image_meta": {"width": 1024, "height": 768},
         "sample_id": "5747db47-...",
         "scene": [
-          {"category": "House", "bboxes": [[61,55,606,521], ...]},
-          {"category": "Tree", "bboxes": [[291,25,382,97], ...]},
+          {"category": "House", "bboxes": ["<box>[61,55,606,521]</box>", ...]},
+          {"category": "Tree", "bboxes": ["<box>[291,25,382,97]</box>", ...]},
           ...
         ]
       }
